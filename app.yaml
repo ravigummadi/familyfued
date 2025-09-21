@@ -1,0 +1,18 @@
+runtime: python39
+
+entrypoint: gunicorn -w 4 -k uvicorn.workers.UvicornWorker backend.main:app
+
+handlers:
+  # API routes
+  - url: /api/.*
+    script: auto
+
+  # Serve static assets
+  - url: /(.*)
+    static_files: frontend/build/\1
+    upload: frontend/build/(.*)
+
+  # Serve index.html for all other routes to enable client-side routing
+  - url: /.*
+    static_files: frontend/build/index.html
+    upload: frontend/build/index.html
