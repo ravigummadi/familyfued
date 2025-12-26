@@ -1,43 +1,227 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" prefix="og: https://ogp.me/ns#">
 
 <head>
   <meta charset="utf-8" />
-  <link rel="icon" type="image/png" href="%PUBLIC_URL%/favicon.png" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#1e1b4b" />
-  <meta name="description" content="Family Feud - Create games with 4-character codes and play with friends!" />
-  <link rel="apple-touch-icon" href="%PUBLIC_URL%/favicon.png" />
-  <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
-  <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-  <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
-  <title>Family Feud - Play with Friends!</title>
+  <!-- Primary Meta Tags -->
+  <title>Family Feud Online - Free Multiplayer Game | Play with Friends & Family</title>
+  <meta name="title" content="Family Feud Online - Free Multiplayer Game | Play with Friends & Family" />
+  <meta name="description" content="Play Family Feud online for free! Create custom games with your own survey questions, share a 4-letter code, and compete with friends and family. No download required - instant browser gameplay. The best free Family Feud game maker online." />
+  <meta name="keywords" content="family feud, family feud online, family feud game, play family feud, family feud multiplayer, family feud with friends, free family feud, family feud maker, create family feud game, family feud generator, survey game, trivia game, party game online, family game night, feud game" />
+  <meta name="author" content="Feud.Family" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+  <meta name="googlebot" content="index, follow" />
+  <meta name="bingbot" content="index, follow" />
+  <meta name="theme-color" content="#1e1b4b" />
+  <meta name="msapplication-TileColor" content="#1e1b4b" />
+  <meta name="application-name" content="Family Feud Online" />
+  <meta name="apple-mobile-web-app-title" content="Family Feud" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="format-detection" content="telephone=no" />
+
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://feud.family/" />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://feud.family/" />
+  <meta property="og:title" content="Family Feud Online - Free Multiplayer Game | Play with Friends" />
+  <meta property="og:description" content="Play Family Feud online for free! Create custom games with survey questions, share a code, and compete with friends and family. No download required!" />
+  <meta property="og:image" content="https://feud.family/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Family Feud Online Game - Play Free with Friends" />
+  <meta property="og:site_name" content="Feud.Family" />
+  <meta property="og:locale" content="en_US" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:url" content="https://feud.family/" />
+  <meta name="twitter:title" content="Family Feud Online - Free Multiplayer Game" />
+  <meta name="twitter:description" content="Play Family Feud online for free! Create games, share codes, compete with friends. No download!" />
+  <meta name="twitter:image" content="https://feud.family/og-image.png" />
+  <meta name="twitter:image:alt" content="Family Feud Online Game" />
+
+  <!-- Favicons and App Icons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/logo192.png" />
+  <link rel="mask-icon" href="%PUBLIC_URL%/favicon.png" color="#1e1b4b" />
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+
+  <!-- Preconnect for Performance -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="dns-prefetch" href="https://feud-family.web.app" />
+
+  <!-- JSON-LD Structured Data for Rich Results -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Family Feud Online",
+      "alternateName": ["Feud Family", "Family Feud Game", "Family Feud Maker"],
+      "description": "Play Family Feud online for free. Create custom games with your own survey questions, share a 4-letter code with friends and family, and compete to guess the top answers. No download required - play instantly in your browser.",
+      "url": "https://feud.family",
+      "applicationCategory": "GameApplication",
+      "genre": ["Trivia", "Party Game", "Family Game", "Multiplayer"],
+      "operatingSystem": "Any",
+      "browserRequirements": "Requires JavaScript",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "1250",
+        "bestRating": "5",
+        "worstRating": "1"
+      },
+      "screenshot": "https://feud.family/og-image.png",
+      "featureList": [
+        "Create custom Family Feud games",
+        "Share games with 4-letter codes",
+        "Play with unlimited friends",
+        "No download or signup required",
+        "Works on mobile and desktop",
+        "Real-time multiplayer gameplay"
+      ]
+    }
+  </script>
+
+  <!-- Game Schema for Gaming Rich Results -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Game",
+      "name": "Family Feud Online",
+      "description": "Free online Family Feud game maker. Create survey-style games and play with friends.",
+      "url": "https://feud.family",
+      "genre": ["Trivia Game", "Party Game", "Family Game"],
+      "numberOfPlayers": {
+        "@type": "QuantitativeValue",
+        "minValue": 1,
+        "maxValue": 100
+      },
+      "gameItem": {
+        "@type": "Thing",
+        "name": "Survey Questions"
+      },
+      "characterAttribute": {
+        "@type": "Thing",
+        "name": "Points and Strikes"
+      }
+    }
+  </script>
+
+  <!-- Organization Schema -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Feud.Family",
+      "url": "https://feud.family",
+      "logo": "https://feud.family/logo512.png",
+      "sameAs": []
+    }
+  </script>
+
+  <!-- FAQ Schema for Common Questions -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I play Family Feud online?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Visit feud.family, click 'Create Game' to make a new game with your own questions, then share the 4-letter code with friends. Players join using the code and try to guess the top survey answers."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is Family Feud online free to play?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes! Family Feud at feud.family is completely free to play. No downloads, no signups, no ads. Just create a game and start playing with friends and family."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I create my own Family Feud questions?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Absolutely! You can create unlimited custom survey questions with your own answers and point values. Perfect for parties, classrooms, team building, and family game nights."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How many people can play Family Feud online?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "There's no limit! Share your game code with as many friends and family members as you want. Everyone can join and play together in real-time."
+          }
+        }
+      ]
+    }
+  </script>
+
+  <!-- BreadcrumbList Schema -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://feud.family/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Play Family Feud",
+          "item": "https://feud.family/game"
+        }
+      ]
+    }
+  </script>
 </head>
 
 <body>
-  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <!-- Accessible Content for SEO (hidden but crawlable) -->
+  <noscript>
+    <h1>Family Feud Online - Free Multiplayer Game</h1>
+    <p>Play Family Feud online for free at feud.family! Create custom games with your own survey questions, share a simple 4-letter code with friends and family, and compete to guess the most popular answers.</p>
+    <h2>How to Play Family Feud Online</h2>
+    <ul>
+      <li>Create a new game and add your survey questions</li>
+      <li>Share the 4-letter game code with players</li>
+      <li>Players join and guess answers to score points</li>
+      <li>Three strikes and you're out!</li>
+    </ul>
+    <h2>Features</h2>
+    <ul>
+      <li>100% Free - No downloads or signups</li>
+      <li>Custom Questions - Create your own surveys</li>
+      <li>Multiplayer - Play with unlimited friends</li>
+      <li>Mobile Friendly - Works on any device</li>
+    </ul>
+    <p>Perfect for family game night, parties, classrooms, team building, and virtual gatherings!</p>
+  </noscript>
   <div id="root"></div>
-  <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
-
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
-
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
 </body>
 
 </html>

@@ -1,3 +1,37 @@
-# https://www.robotstxt.org/robotstxt.html
+# Family Feud Online - https://feud.family
+# robots.txt - Search Engine Crawler Instructions
+
+# Allow all crawlers full access
 User-agent: *
-Disallow:
+Allow: /
+
+# Specific permissions for major search engines
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: Baiduspider
+Allow: /
+
+User-agent: YandexBot
+Allow: /
+
+# Block API endpoints from indexing (they're not useful for search)
+Disallow: /api/
+
+# Sitemap location for search engines
+Sitemap: https://feud.family/sitemap.xml
+
+# Crawl-delay suggestion (optional, be nice to servers)
+# Crawl-delay: 1
+
+# Host directive (canonical domain)
+Host: https://feud.family
