@@ -858,6 +858,44 @@ body {
   color: var(--text-light);
 }
 
+/* SEO Toggle Button */
+.seo-toggle-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--board-border);
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  color: var(--text-muted);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 0.5rem;
+}
+
+.seo-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--accent-gold);
+  border-color: var(--accent-gold);
+}
+
+/* Collapsible SEO Details */
+.seo-details {
+  overflow: hidden;
+  transition: max-height 0.4s ease, opacity 0.3s ease, margin-top 0.3s ease;
+}
+
+.seo-details.collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+}
+
+.seo-details.expanded {
+  max-height: 2000px;
+  opacity: 1;
+  margin-top: 1rem;
+}
+
 /* ==================== Accessibility ==================== */
 .visually-hidden {
   position: absolute;

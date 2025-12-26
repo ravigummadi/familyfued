@@ -9,6 +9,7 @@ const Home: React.FC = () => {
     const [mode, setMode] = useState<GameMode>('auto');
     const [isCreating, setIsCreating] = useState(false);
     const [error, setError] = useState('');
+    const [showSeoContent, setShowSeoContent] = useState(false);
 
     const handleCreateGame = async () => {
         setIsCreating(true);
@@ -123,40 +124,58 @@ const Home: React.FC = () => {
                 <div className="home-error" role="alert" aria-live="polite">{error}</div>
             )}
 
-            {/* SEO Content Section - Visible for crawlers and users */}
+            {/* SEO Content Section - Collapsible for UX, fully crawlable by Google */}
             <section className="seo-content" aria-label="About Family Feud Online">
                 <h2>The Best Free Family Feud Game Online</h2>
                 <p>
                     Welcome to Family Feud Online at feud.family - the easiest way to play Family Feud
-                    with friends, family, coworkers, or classmates! Create your own custom survey
-                    questions or use popular Family Feud-style questions for parties, game nights,
-                    team building, and virtual gatherings.
+                    with friends, family, coworkers, or classmates!
                 </p>
 
-                <h3>How to Play Family Feud Online</h3>
-                <ol>
-                    <li><strong>Create a Game:</strong> Click "Create Free Game" to start hosting</li>
-                    <li><strong>Add Questions:</strong> Write your own survey questions with answers and point values</li>
-                    <li><strong>Share the Code:</strong> Give players your 4-letter game code</li>
-                    <li><strong>Play Together:</strong> Guess the top answers - 3 strikes and you're out!</li>
-                </ol>
+                <button
+                    className="seo-toggle-btn"
+                    onClick={() => setShowSeoContent(!showSeoContent)}
+                    aria-expanded={showSeoContent}
+                    aria-controls="seo-details"
+                >
+                    {showSeoContent ? '▲ Show Less' : '▼ Learn More About Family Feud Online'}
+                </button>
 
-                <h3>Why Choose Our Free Family Feud Game?</h3>
-                <ul>
-                    <li><strong>100% Free:</strong> No hidden fees, no ads, no premium features</li>
-                    <li><strong>No Download:</strong> Play instantly in your browser on any device</li>
-                    <li><strong>No Sign Up:</strong> Start playing immediately without creating an account</li>
-                    <li><strong>Unlimited Players:</strong> Invite as many friends as you want</li>
-                    <li><strong>Custom Questions:</strong> Create personalized Family Feud games</li>
-                    <li><strong>Mobile Friendly:</strong> Works perfectly on phones, tablets, and computers</li>
-                </ul>
+                <div
+                    id="seo-details"
+                    className={`seo-details ${showSeoContent ? 'expanded' : 'collapsed'}`}
+                    aria-hidden={!showSeoContent}
+                >
+                    <p>
+                        Create your own custom survey questions or use popular Family Feud-style
+                        questions for parties, game nights, team building, and virtual gatherings.
+                    </p>
 
-                <h3>Perfect For</h3>
-                <p>
-                    Family game nights, birthday parties, holiday gatherings, classroom activities,
-                    corporate team building, Zoom calls, Discord hangouts, and any time you want
-                    to have fun with a group!
-                </p>
+                    <h3>How to Play Family Feud Online</h3>
+                    <ol>
+                        <li><strong>Create a Game:</strong> Click "Create Free Game" to start hosting</li>
+                        <li><strong>Add Questions:</strong> Write your own survey questions with answers and point values</li>
+                        <li><strong>Share the Code:</strong> Give players your 4-letter game code</li>
+                        <li><strong>Play Together:</strong> Guess the top answers - 3 strikes and you're out!</li>
+                    </ol>
+
+                    <h3>Why Choose Our Free Family Feud Game?</h3>
+                    <ul>
+                        <li><strong>100% Free:</strong> No hidden fees, no ads, no premium features</li>
+                        <li><strong>No Download:</strong> Play instantly in your browser on any device</li>
+                        <li><strong>No Sign Up:</strong> Start playing immediately without creating an account</li>
+                        <li><strong>Unlimited Players:</strong> Invite as many friends as you want</li>
+                        <li><strong>Custom Questions:</strong> Create personalized Family Feud games</li>
+                        <li><strong>Mobile Friendly:</strong> Works perfectly on phones, tablets, and computers</li>
+                    </ul>
+
+                    <h3>Perfect For</h3>
+                    <p>
+                        Family game nights, birthday parties, holiday gatherings, classroom activities,
+                        corporate team building, Zoom calls, Discord hangouts, and any time you want
+                        to have fun with a group!
+                    </p>
+                </div>
             </section>
         </main>
     );
