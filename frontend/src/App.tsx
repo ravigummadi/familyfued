@@ -1,23 +1,21 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import Admin from './Admin';
+import Home from './Home';
+import Host from './Host';
 import Player from './Player';
-import { Navbar, Nav } from 'react-bootstrap';
+import './index.css';
 
 function App() {
   return (
     <Router>
       <div>
-        <Navbar bg="dark" variant="dark">
-          <Navbar.Brand as={Link} to="/">Family Feud</Navbar.Brand>
-          <Nav className="mr-auto">
-            <Nav.Link as={Link} to="/">Game</Nav.Link>
-            <Nav.Link as={Link} to="/admin">Admin</Nav.Link>
-          </Nav>
-        </Navbar>
+        <nav className="navbar-custom">
+          <Link to="/" className="navbar-brand">Family Feud</Link>
+        </nav>
         <Routes>
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/" element={<Player />} />
+          <Route path="/" element={<Home />} />
+          <Route path="/game/:code" element={<Player />} />
+          <Route path="/game/:code/host" element={<Host />} />
         </Routes>
       </div>
     </Router>
@@ -25,4 +23,3 @@ function App() {
 }
 
 export default App;
-

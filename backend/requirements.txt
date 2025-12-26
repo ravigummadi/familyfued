@@ -1,5 +1,7 @@
 fastapi
-uvicorn
+uvicorn[standard]
 thefuzz
 python-levenshtein
 gunicorn
+firebase-admin
+google-cloud-firestore

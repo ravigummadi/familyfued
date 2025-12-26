@@ -1,11 +1,23 @@
-from fastapi import FastAPI, HTTPException
-from typing import Dict, List, Optional, Set
+from fastapi import FastAPI, HTTPException, Header
+from fastapi.middleware.cors import CORSMiddleware
+from typing import Optional
 from thefuzz import process
-import random
+import uuid
 
+from firebase_config import get_db
+from game_service import (
+    create_game,
+    get_game,
+    update_game,
+    add_question_to_game,
+    start_game,
+    advance_question,
+)
 from models import (
     Answer,
-    GameSetup,
+    CreateGameRequest,
+    GameMode,
+    GameSession,
     GameStatus,
     Guess,
     GuessResponse,
@@ -14,280 +26,271 @@ from models import (
 )
 
 
-app = FastAPI()
+app = FastAPI(title="Family Feud API", version="2.0.0")
+
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 FUZZ_THRESHOLD = 80
 MAX_STRIKES = 3
 
-questions: Dict[int, Question] = {}
-next_question_id: int = 1
 
-
-class GameState:
-    def __init__(self) -> None:
-        self.question_ids: List[int] = []
-        self.current_index: int = -1
-        self.revealed_answer_texts: Set[str] = set()
-        self.score: int = 0
-        self.strikes: int = 0
-        self.completed: bool = False
-
-    def start(self, question_ids: List[int]) -> None:
-        if not question_ids:
-            raise ValueError("At least one question is required to start a game.")
-        self.question_ids = question_ids
-        self.current_index = -1
-        self.score = 0
-        self.strikes = 0
-        self.completed = False
-        self.revealed_answer_texts = set()
-        self.advance()
-
-    def advance(self) -> bool:
-        self.current_index += 1
-        if self.current_index >= len(self.question_ids):
-            self.completed = True
-            self.revealed_answer_texts = set()
-            self.strikes = 0
-            return False
-
-        self.revealed_answer_texts = set()
-        self.strikes = 0
-        return True
-
-    def current_question(self) -> Optional[Question]:
-        if self.completed:
-            return None
-        if 0 <= self.current_index < len(self.question_ids):
-            qid = self.question_ids[self.current_index]
-            return questions.get(qid)
-        return None
-
-    def reveal(self, answer: Answer) -> None:
-        self.revealed_answer_texts.add(answer.text)
-
-    def revealed_answers(self) -> List[Answer]:
-        question = self.current_question()
-        if not question:
-            return []
-        return [answer for answer in question.answers if answer.text in self.revealed_answer_texts]
-
-    def reset(self) -> None:
-        self.question_ids = []
-        self.current_index = -1
-        self.revealed_answer_texts = set()
-        self.score = 0
-        self.strikes = 0
-        self.completed = False
-
-
-game = GameState()
-
-
-def _register_question(payload: QuestionCreate) -> Question:
-    """Create a Question with a new ID and store it in the in-memory registry."""
-    global next_question_id
-
-    answers: List[Answer] = []
-    for answer in payload.answers:
-        text = answer.text.strip()
-        if not text:
-            continue
-        answers.append(Answer(text=text, weight=answer.weight))
-
-    if not answers:
-        raise HTTPException(status_code=400, detail="At least one answer with text is required.")
-
-    text = payload.text.strip()
-    if not text:
-        raise HTTPException(status_code=400, detail="Question text cannot be empty.")
-
-    question = Question(id=next_question_id, text=text, answers=answers)
-    questions[next_question_id] = question
-    next_question_id += 1
-    return question
-
-
-def _bootstrap_questions() -> None:
-    if questions:
-        return
-
-    defaults = [
-        (
-            "Name a popular search engine.",
-            [
-                ("Google", 60),
-                ("Bing", 20),
-                ("Yahoo", 10),
-                ("DuckDuckGo", 10),
-            ],
-        ),
-        (
-            "Name a fruit that is typically red.",
-            [
-                ("Apple", 50),
-                ("Strawberry", 30),
-                ("Cherry", 15),
-                ("Raspberry", 5),
-            ],
-        ),
-    ]
-
-    for text, answers in defaults:
-        payload = QuestionCreate(
-            text=text,
-            answers=[Answer(text=answer_text, weight=weight) for answer_text, weight in answers],
-        )
-        _register_question(payload)
-
-
-def _build_game_status() -> GameStatus:
+def _build_game_status(game: GameSession, is_host: bool = False) -> GameStatus:
+    """Build public game status from session."""
     question = game.current_question()
-    revealed_answers = game.revealed_answers()
-    current_index: Optional[int] = None
-    if question and 0 <= game.current_index < len(game.question_ids):
-        current_index = game.current_index
-
+    revealed_answers = game.get_revealed_answer_objects()
+    
+    # For players, hide the full answers list to not reveal count
+    # Create a sanitized question copy without exposing all answers
+    sanitized_question = None
+    total_answers = 0
+    if question:
+        sanitized_question = Question(
+            id=question.id,
+            text=question.text,
+            answers=revealed_answers if not is_host else question.answers
+        )
+        total_answers = len(question.answers)
+    
     return GameStatus(
-        question=question,
+        code=game.code,
+        mode=game.mode,
+        status=game.status,
+        question=sanitized_question,
         revealed_answers=revealed_answers,
         score=game.score,
         strikes=game.strikes,
-        max_strikes=MAX_STRIKES,
-        completed=game.completed,
-        current_index=current_index,
-        total_questions=len(game.question_ids),
+        max_strikes=game.max_strikes,
+        current_index=game.current_index if game.status == "playing" else None,
+        total_questions=len(game.questions),
+        total_answers=total_answers,
+        is_host=is_host,
     )
-
-
-@app.on_event("startup")
-async def on_startup() -> None:
-    _bootstrap_questions()
 
 
 @app.get("/")
 async def read_root() -> dict:
-    return {"app": "family-feud"}
+    return {"app": "family-feud", "version": "2.0.0"}
 
 
-@app.post("/api/questions", response_model=Question)
-async def create_question(question: QuestionCreate) -> Question:
-    return _register_question(question)
+@app.post("/api/games")
+async def create_new_game(
+    request: CreateGameRequest,
+    x_host_id: Optional[str] = Header(None)
+) -> dict:
+    """Create a new game and return the game code with host_id."""
+    db = get_db()
+    # Use provided host ID or generate a new one
+    host_id = x_host_id or str(uuid.uuid4())
+    game = create_game(db, request.mode, host_id)
+    
+    # Return status with host_id for the host to store
+    status = _build_game_status(game, is_host=True)
+    return {
+        **status.model_dump(),
+        "host_id": host_id  # Include host_id for frontend to store
+    }
 
 
-@app.get("/api/questions", response_model=List[Question])
-async def get_questions() -> List[Question]:
-    return [questions[qid] for qid in sorted(questions.keys())]
+@app.get("/api/games/{code}", response_model=GameStatus)
+async def get_game_status(
+    code: str,
+    x_host_id: Optional[str] = Header(None)
+) -> GameStatus:
+    """Get the current game status."""
+    db = get_db()
+    game = get_game(db, code.upper())
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    is_host = x_host_id == game.host_id
+    return _build_game_status(game, is_host=is_host)
 
 
-@app.post("/api/game/session", response_model=GameStatus)
-async def start_game(game_setup: GameSetup) -> GameStatus:
-    if not game_setup.question_ids:
-        raise HTTPException(status_code=400, detail="Provide at least one question id to start a game.")
+@app.post("/api/games/{code}/questions", response_model=GameStatus)
+async def add_question(
+    code: str,
+    question: QuestionCreate,
+    x_host_id: Optional[str] = Header(None)
+) -> GameStatus:
+    """Add a question to the game."""
+    db = get_db()
+    game = get_game(db, code.upper())
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    # Only host can add questions in waiting state
+    if game.status != "waiting":
+        raise HTTPException(status_code=400, detail="Cannot add questions after game started")
+    
+    # Validate question
+    answers = [Answer(text=a.text.strip(), weight=a.weight) for a in question.answers if a.text.strip()]
+    if not answers:
+        raise HTTPException(status_code=400, detail="At least one answer required")
+    if not question.text.strip():
+        raise HTTPException(status_code=400, detail="Question text required")
+    
+    new_question = Question(
+        id=len(game.questions) + 1,
+        text=question.text.strip(),
+        answers=answers
+    )
+    game.questions.append(new_question)
+    update_game(db, game)
+    
+    is_host = x_host_id == game.host_id
+    return _build_game_status(game, is_host=is_host)
 
-    missing = [qid for qid in game_setup.question_ids if qid not in questions]
-    if missing:
-        raise HTTPException(status_code=404, detail=f"Question ids not found: {missing}")
 
-    # Preserve admin order unless shuffle is requested, and drop duplicates while preserving order.
-    ordered_ids: List[int] = []
-    seen: Set[int] = set()
-    for qid in game_setup.question_ids:
-        if qid not in seen:
-            ordered_ids.append(qid)
-            seen.add(qid)
-
-    if game_setup.shuffle:
-        random.shuffle(ordered_ids)
-
+@app.post("/api/games/{code}/start", response_model=GameStatus)
+async def start_game_endpoint(
+    code: str,
+    x_host_id: str = Header(...)
+) -> GameStatus:
+    """Start the game (host only)."""
+    db = get_db()
     try:
-        game.start(ordered_ids)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
-
-    return _build_game_status()
-
-
-@app.post("/api/game/next-question", response_model=GameStatus)
-async def next_question() -> GameStatus:
-    if not game.question_ids:
-        raise HTTPException(status_code=400, detail="No active game. Start one from the admin panel.")
-
-    if game.completed:
-        return _build_game_status()
-
-    game.advance()
-    return _build_game_status()
+        game = start_game(db, code.upper(), x_host_id)
+        return _build_game_status(game, is_host=True)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
 
 
-@app.post("/api/game/guess", response_model=GuessResponse)
-async def guess(player_guess: Guess) -> GuessResponse:
+@app.post("/api/games/{code}/next", response_model=GameStatus)
+async def next_question(
+    code: str,
+    x_host_id: Optional[str] = Header(None)
+) -> GameStatus:
+    """Advance to the next question."""
+    db = get_db()
+    try:
+        game = advance_question(db, code.upper(), x_host_id)
+        is_host = x_host_id == game.host_id
+        return _build_game_status(game, is_host=is_host)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@app.post("/api/games/{code}/guess", response_model=GuessResponse)
+async def make_guess(
+    code: str,
+    player_guess: Guess,
+    x_host_id: Optional[str] = Header(None)
+) -> GuessResponse:
+    """Submit a guess for the current question."""
+    db = get_db()
+    game = get_game(db, code.upper())
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    if game.status != "playing":
+        raise HTTPException(status_code=400, detail="Game is not in progress")
+    
     question = game.current_question()
     if not question:
-        raise HTTPException(status_code=400, detail="No active question. Start a game from the admin panel.")
-
+        raise HTTPException(status_code=400, detail="No active question")
+    
     guess_text = player_guess.text.strip()
     if not guess_text:
-        raise HTTPException(status_code=400, detail="Guess cannot be empty.")
-
-    choices = [answer.text for answer in question.answers]
+        raise HTTPException(status_code=400, detail="Guess cannot be empty")
+    
+    # Fuzzy match against answers
+    choices = [a.text for a in question.answers]
     match = process.extractOne(guess_text, choices)
-
+    
+    is_host = x_host_id == game.host_id
+    
     if match and match[1] >= FUZZ_THRESHOLD:
-        matched_answer = next((answer for answer in question.answers if answer.text == match[0]), None)
-        if matched_answer is None:
-            # Should not happen, but guard just in case the answer list changed mid-game.
-            raise HTTPException(status_code=500, detail="Matched answer is no longer available.")
-
-        if matched_answer.text in game.revealed_answer_texts:
+        matched_answer = next((a for a in question.answers if a.text == match[0]), None)
+        if not matched_answer:
+            raise HTTPException(status_code=500, detail="Match error")
+        
+        # Already revealed?
+        if matched_answer.text in game.revealed_answers:
             return GuessResponse(
                 correct=False,
-                message="Answer already revealed.",
+                message="Already revealed!",
                 strikes=game.strikes,
                 score=game.score,
-                status=_build_game_status(),
+                status=_build_game_status(game, is_host=is_host),
             )
-
-        game.reveal(matched_answer)
+        
+        # Reveal the answer
+        game.revealed_answers.append(matched_answer.text)
         game.score += matched_answer.weight or 0
-
+        
+        # Check if all answers revealed
         advanced = False
-        if len(game.revealed_answer_texts) == len(question.answers):
-            advanced = game.advance()
-
+        if len(game.revealed_answers) == len(question.answers):
+            if game.mode == GameMode.AUTO_ADVANCE:
+                game.current_index += 1
+                game.revealed_answers = []
+                game.strikes = 0
+                if game.current_index >= len(game.questions):
+                    game.status = "completed"
+                advanced = True
+        
+        update_game(db, game)
+        
         return GuessResponse(
             correct=True,
             answer=matched_answer,
             strikes=game.strikes,
             score=game.score,
             advanced=advanced,
-            status=_build_game_status(),
+            status=_build_game_status(game, is_host=is_host),
         )
-
+    
+    # Wrong guess - add strike
     game.strikes += 1
-    strike_count = game.strikes
-
-    if strike_count >= MAX_STRIKES:
-        advanced = game.advance()
-        status = _build_game_status()
-        return GuessResponse(
-            correct=False,
-            message="Strike! Moving to next question.",
-            strikes=MAX_STRIKES,
-            score=game.score,
-            advanced=advanced,
-            status=status,
-        )
-
+    advanced = False
+    message = "Strike!"
+    
+    if game.strikes >= MAX_STRIKES:
+        if game.mode == GameMode.AUTO_ADVANCE:
+            game.current_index += 1
+            game.revealed_answers = []
+            game.strikes = 0
+            if game.current_index >= len(game.questions):
+                game.status = "completed"
+            advanced = True
+            message = "3 strikes! Moving on..."
+    
+    update_game(db, game)
+    
     return GuessResponse(
         correct=False,
-        message="Strike!",
-        strikes=strike_count,
+        message=message,
+        strikes=game.strikes,
         score=game.score,
-        status=_build_game_status(),
+        advanced=advanced,
+        status=_build_game_status(game, is_host=is_host),
     )
 
 
-@app.get("/api/game/state", response_model=GameStatus)
-async def get_game_state() -> GameStatus:
-    return _build_game_status()
+# Keep the old endpoints for backwards compatibility during transition
+@app.get("/api/game/state", response_model=dict)
+async def legacy_game_state() -> dict:
+    """Legacy endpoint - returns empty state."""
+    return {
+        "question": None,
+        "revealed_answers": [],
+        "score": 0,
+        "strikes": 0,
+        "max_strikes": 3,
+        "completed": False,
+        "current_index": None,
+        "total_questions": 0,
+        "total_answers": 0,
+    }

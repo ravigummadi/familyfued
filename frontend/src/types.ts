@@ -9,15 +9,21 @@ export interface Question {
   answers: Answer[];
 }
 
+export type GameMode = 'host' | 'auto';
+
 export interface GameStatus {
+  code: string;
+  mode: GameMode;
+  status: 'waiting' | 'playing' | 'completed';
   question: Question | null;
   revealed_answers: Answer[];
   score: number;
   strikes: number;
   max_strikes: number;
-  completed: boolean;
   current_index: number | null;
   total_questions: number;
+  total_answers: number;
+  is_host: boolean;
 }
 
 export interface GuessResponse {

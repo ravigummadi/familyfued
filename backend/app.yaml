@@ -1,0 +1,7 @@
+service: backend
+runtime: python311
+instance_class: F1
+entrypoint: gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app
+automatic_scaling:
+  min_instances: 0
+  max_instances: 1
