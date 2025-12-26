@@ -948,3 +948,324 @@ a:focus-visible {
     font-size: 1.3rem;
   }
 }
+
+/* ==================== TV Display Mode ==================== */
+.display-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #0a0a2e 0%, #1a1a4a 50%, #0d0d3d 100%);
+  padding: 2rem;
+  overflow: hidden;
+}
+
+/* Waiting State */
+.display-waiting {
+  text-align: center;
+}
+
+.display-title {
+  font-size: 5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent-gold) 0%, #fcd34d 50%, var(--accent-yellow) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 1rem;
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.display-code-large {
+  font-size: 8rem;
+  font-weight: 800;
+  color: var(--accent-gold);
+  letter-spacing: 1.5rem;
+  text-shadow: 0 0 60px var(--glow-gold);
+  margin-bottom: 1rem;
+}
+
+.display-waiting-text {
+  font-size: 1.5rem;
+  color: var(--text-muted);
+  margin-bottom: 2rem;
+}
+
+.display-qr-center {
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid var(--board-border);
+  border-radius: 20px;
+  padding: 2rem;
+  display: inline-block;
+  margin-bottom: 2rem;
+}
+
+.display-qr-center p {
+  color: var(--text-muted);
+  margin-top: 1rem;
+  font-size: 1.25rem;
+}
+
+.display-players-hint {
+  color: var(--success-green);
+  font-size: 1.25rem;
+}
+
+/* QR Corner for Active Game */
+.display-qr-corner {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--board-border);
+  z-index: 100;
+}
+
+.display-qr-code {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+  letter-spacing: 0.25rem;
+}
+
+/* Question Display */
+.display-question {
+  text-align: center;
+  margin-bottom: 2rem;
+  max-width: 1200px;
+}
+
+.display-question-number {
+  color: var(--accent-gold);
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.display-question-text {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--text-light);
+  line-height: 1.3;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+  margin: 0;
+}
+
+/* Answer Board */
+.display-board {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  max-width: 1400px;
+  width: 100%;
+  margin-bottom: 2rem;
+}
+
+.display-slot {
+  background: linear-gradient(145deg, #252570 0%, #1a1a50 100%);
+  border: 4px solid var(--board-border);
+  border-radius: 16px;
+  padding: 1.5rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  min-height: 90px;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.display-slot.revealed {
+  background: linear-gradient(145deg, var(--slot-revealed) 0%, #1e3a8a 100%);
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 40px var(--glow-blue);
+  animation: reveal-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.display-slot-number {
+  background: var(--accent-gold);
+  color: var(--bg-dark);
+  font-weight: 800;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.display-slot-text {
+  flex: 1;
+  font-size: 1.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.display-slot-text.display-hidden {
+  color: var(--text-muted);
+  font-size: 2rem;
+  letter-spacing: 4px;
+}
+
+.display-slot-points {
+  background: rgba(251, 191, 36, 0.2);
+  color: var(--accent-gold);
+  font-weight: 800;
+  padding: 0.5rem 1.25rem;
+  border-radius: 10px;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+/* Footer - Score and Strikes */
+.display-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6rem;
+  margin-top: 1rem;
+}
+
+.display-score {
+  text-align: center;
+}
+
+.display-score .label {
+  display: block;
+  color: var(--text-muted);
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  margin-bottom: 0.5rem;
+}
+
+.display-score .value {
+  display: block;
+  background: linear-gradient(135deg, var(--accent-gold) 0%, #f59e0b 100%);
+  color: var(--bg-dark);
+  font-size: 4rem;
+  font-weight: 800;
+  padding: 0.5rem 3rem;
+  border-radius: 16px;
+  box-shadow: 0 0 50px var(--glow-gold);
+}
+
+.display-strikes {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.display-strike {
+  font-size: 5rem;
+  font-weight: 800;
+  color: #374151;
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.display-strike.active {
+  color: var(--strike-red);
+  text-shadow: 0 0 40px var(--strike-red);
+  animation: strike-shake 0.5s ease;
+}
+
+/* Game Over */
+.display-gameover {
+  text-align: center;
+}
+
+.display-gameover h1 {
+  font-size: 6rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent-gold) 0%, #fcd34d 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 2rem;
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.display-final-score {
+  background: rgba(0, 0, 0, 0.3);
+  border: 3px solid var(--accent-gold);
+  border-radius: 24px;
+  padding: 2rem 4rem;
+  display: inline-block;
+}
+
+.display-final-score .label {
+  display: block;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.display-final-score .value {
+  font-size: 8rem;
+  font-weight: 800;
+  color: var(--accent-gold);
+  text-shadow: 0 0 60px var(--glow-gold);
+}
+
+.display-thanks {
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  margin-top: 2rem;
+}
+
+/* Error and Loading States */
+.display-error,
+.display-loading {
+  text-align: center;
+}
+
+.display-error h1,
+.display-loading h1 {
+  font-size: 3rem;
+  color: var(--text-light);
+}
+
+.display-error p {
+  color: var(--text-muted);
+  font-size: 1.5rem;
+}
+
+/* 4K Optimizations */
+@media (min-width: 1920px) {
+  .display-question-text {
+    font-size: 4rem;
+  }
+
+  .display-slot {
+    min-height: 110px;
+    padding: 2rem 2.5rem;
+  }
+
+  .display-slot-text {
+    font-size: 2.25rem;
+  }
+
+  .display-slot-points {
+    font-size: 2rem;
+  }
+
+  .display-score .value {
+    font-size: 5rem;
+  }
+
+  .display-strike {
+    font-size: 6rem;
+  }
+}
