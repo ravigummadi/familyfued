@@ -1,7 +1,8 @@
-from fastapi import FastAPI, HTTPException, Header
+import os
+
+from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional
-from thefuzz import process
+from typing import Optional, Annotated
 import uuid
 
 from firebase_config import get_db
@@ -24,22 +25,49 @@ from models import (
     Question,
     QuestionCreate,
 )
+from game_logic import GameStateMachine
 
 
 app = FastAPI(title="Family Feud API", version="2.0.0")
 
-origins = ["*"]
+# CORS configuration - restrict to known domains
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "").split(",") if os.getenv("ALLOWED_ORIGINS") else [
+    "https://feud.family",
+    "https://www.feud.family",
+    "https://feud-family.web.app",
+    "https://feud-family.firebaseapp.com",
+    "http://localhost:3000",  # Local development
+    "http://127.0.0.1:3000",
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "X-Host-Id", "Authorization"],
 )
 
-FUZZ_THRESHOLD = 80
-MAX_STRIKES = 3
+# Configuration - can be overridden via environment variables
+FUZZ_THRESHOLD = int(os.getenv("FUZZ_THRESHOLD", "80"))
+MAX_STRIKES = int(os.getenv("MAX_STRIKES", "3"))
+
+# Game state machine for processing guesses (pure functional core)
+game_state_machine = GameStateMachine(max_strikes=MAX_STRIKES, fuzz_threshold=FUZZ_THRESHOLD)
+
+
+# FastAPI dependency for game lookup - eliminates repeated get_game() + 404 pattern
+async def get_game_or_404(code: str) -> GameSession:
+    """Dependency to fetch a game by code, raising 404 if not found."""
+    db = get_db()
+    game = get_game(db, code.upper())
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    return game
+
+
+# Type alias for cleaner endpoint signatures
+GameDep = Annotated[GameSession, Depends(get_game_or_404)]
 
 
 def _build_game_status(game: GameSession, is_host: bool = False) -> GameStatus:
@@ -101,50 +129,42 @@ async def create_new_game(
 
 @app.get("/api/games/{code}", response_model=GameStatus)
 async def get_game_status(
-    code: str,
+    game: GameDep,
     x_host_id: Optional[str] = Header(None)
 ) -> GameStatus:
     """Get the current game status."""
-    db = get_db()
-    game = get_game(db, code.upper())
-    if not game:
-        raise HTTPException(status_code=404, detail="Game not found")
-    
     is_host = x_host_id == game.host_id
     return _build_game_status(game, is_host=is_host)
 
 
 @app.post("/api/games/{code}/questions", response_model=GameStatus)
 async def add_question(
-    code: str,
+    game: GameDep,
     question: QuestionCreate,
     x_host_id: Optional[str] = Header(None)
 ) -> GameStatus:
     """Add a question to the game."""
-    db = get_db()
-    game = get_game(db, code.upper())
-    if not game:
-        raise HTTPException(status_code=404, detail="Game not found")
-    
     # Only host can add questions in waiting state
     if game.status != "waiting":
         raise HTTPException(status_code=400, detail="Cannot add questions after game started")
-    
+
     # Validate question
     answers = [Answer(text=a.text.strip(), weight=a.weight) for a in question.answers if a.text.strip()]
     if not answers:
         raise HTTPException(status_code=400, detail="At least one answer required")
     if not question.text.strip():
         raise HTTPException(status_code=400, detail="Question text required")
-    
+
     new_question = Question(
         id=len(game.questions) + 1,
         text=question.text.strip(),
         answers=answers
     )
     game.questions.append(new_question)
+
+    db = get_db()
     update_game(db, game)
-    
+
     is_host = x_host_id == game.host_id
     return _build_game_status(game, is_host=is_host)
 
@@ -184,98 +204,37 @@ async def next_question(
 
 @app.post("/api/games/{code}/guess", response_model=GuessResponse)
 async def make_guess(
-    code: str,
+    game: GameDep,
     player_guess: Guess,
     x_host_id: Optional[str] = Header(None)
 ) -> GuessResponse:
     """Submit a guess for the current question."""
-    db = get_db()
-    game = get_game(db, code.upper())
-    if not game:
-        raise HTTPException(status_code=404, detail="Game not found")
-    
     if game.status != "playing":
         raise HTTPException(status_code=400, detail="Game is not in progress")
-    
-    question = game.current_question()
-    if not question:
+
+    if not game.current_question():
         raise HTTPException(status_code=400, detail="No active question")
-    
+
     guess_text = player_guess.text.strip()
     if not guess_text:
         raise HTTPException(status_code=400, detail="Guess cannot be empty")
-    
-    # Fuzzy match against answers
-    choices = [a.text for a in question.answers]
-    match = process.extractOne(guess_text, choices)
-    
-    is_host = x_host_id == game.host_id
-    
-    if match and match[1] >= FUZZ_THRESHOLD:
-        matched_answer = next((a for a in question.answers if a.text == match[0]), None)
-        if not matched_answer:
-            raise HTTPException(status_code=500, detail="Match error")
-        
-        # Already revealed?
-        if matched_answer.text in game.revealed_answers:
-            return GuessResponse(
-                correct=False,
-                message="Already revealed!",
-                strikes=game.strikes,
-                score=game.score,
-                status=_build_game_status(game, is_host=is_host),
-            )
-        
-        # Reveal the answer
-        game.revealed_answers.append(matched_answer.text)
-        game.score += matched_answer.weight or 0
-        
-        # Check if all answers revealed
-        advanced = False
-        if len(game.revealed_answers) == len(question.answers):
-            if game.mode == GameMode.AUTO_ADVANCE:
-                game.current_index += 1
-                game.revealed_answers = []
-                game.strikes = 0
-                if game.current_index >= len(game.questions):
-                    game.status = "completed"
-                advanced = True
-        
-        update_game(db, game)
-        
-        return GuessResponse(
-            correct=True,
-            answer=matched_answer,
-            strikes=game.strikes,
-            score=game.score,
-            advanced=advanced,
-            status=_build_game_status(game, is_host=is_host),
-        )
-    
-    # Wrong guess - add strike
-    game.strikes += 1
-    advanced = False
-    message = "Strike!"
-    
-    if game.strikes >= MAX_STRIKES:
-        if game.mode == GameMode.AUTO_ADVANCE:
-            game.current_index += 1
-            game.revealed_answers = []
-            game.strikes = 0
-            if game.current_index >= len(game.questions):
-                game.status = "completed"
-            advanced = True
-            message = "3 strikes! Moving on..."
-    
-    update_game(db, game)
-    
+
+    # Process guess using pure game logic (Functional Core)
+    result, updated_game = game_state_machine.process_guess(game, guess_text)
+
+    # Persist updated state (Imperative Shell)
+    db = get_db()
+    update_game(db, updated_game)
+
+    is_host = x_host_id == updated_game.host_id
     return GuessResponse(
-        correct=False,
-        message=message,
-        strikes=game.strikes,
-        score=game.score,
-        advanced=advanced,
-        status=_build_game_status(game, is_host=is_host),
+        correct=result.correct,
+        answer=result.matched_answer,
+        message=result.message,
+        strikes=updated_game.strikes,
+        score=updated_game.score,
+        advanced=result.should_advance,
+        status=_build_game_status(updated_game, is_host=is_host),
     )
 
 
