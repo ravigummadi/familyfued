@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from './api';
 import { GuessResponse } from './types';
 import { useGameState } from './hooks/useGameState';
+import { useCountUp } from './hooks/useCountUp';
 import AnswerSlots from './components/AnswerSlots';
 import StrikesDisplay from './components/StrikesDisplay';
 import GuessForm from './components/GuessForm';
 import FeedbackMessage, { FeedbackType } from './components/FeedbackMessage';
+import StrikeFlashOverlay from './components/StrikeFlashOverlay';
 
 // Configuration
 const FEEDBACK_DURATION_MS = 2000;
@@ -15,9 +17,18 @@ const Player: React.FC = () => {
     const { code } = useParams<{ code: string }>();
     const navigate = useNavigate();
     const [feedback, setFeedback] = useState<{ type: FeedbackType; text: string } | null>(null);
+    const [showStrikeFlash, setShowStrikeFlash] = useState(false);
 
     // Use shared game state hook
     const { gameState, error, refresh } = useGameState(code);
+
+    // Animated score counter
+    const { count: animatedScore, isAnimating: isScoreAnimating } = useCountUp(gameState?.score ?? 0);
+
+    // Handle strike flash completion
+    const handleStrikeFlashComplete = useCallback(() => {
+        setShowStrikeFlash(false);
+    }, []);
 
     const handleGuess = async (guessText: string) => {
         if (!code) return;
@@ -36,6 +47,8 @@ const Player: React.FC = () => {
                     type: 'wrong',
                     text: result.message || 'Wrong answer!'
                 });
+                // Trigger dramatic strike flash
+                setShowStrikeFlash(true);
             }
 
             refresh();
@@ -139,7 +152,9 @@ const Player: React.FC = () => {
                 <div className="game-stats">
                     <div className="stat-box">
                         <p className="stat-label">Score</p>
-                        <div className="score-display">{gameState.score}</div>
+                        <div className={`score-display ${isScoreAnimating ? 'updating' : ''}`}>
+                            {animatedScore}
+                        </div>
                     </div>
                     <div className="stat-box">
                         <p className="stat-label">Strikes</p>
@@ -149,6 +164,12 @@ const Player: React.FC = () => {
                         />
                     </div>
                 </div>
+
+                {/* Strike Flash Overlay */}
+                <StrikeFlashOverlay
+                    show={showStrikeFlash}
+                    onComplete={handleStrikeFlashComplete}
+                />
 
                 {/* Feedback Message */}
                 {feedback && (

@@ -1,13 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import api from './api';
 import { GameStatus } from './types';
+import { useCountUp } from './hooks/useCountUp';
+import StrikeFlashOverlay from './components/StrikeFlashOverlay';
 
 const Display: React.FC = () => {
     const { code } = useParams<{ code: string }>();
     const [gameState, setGameState] = useState<GameStatus | null>(null);
     const [error, setError] = useState('');
+    const [showStrikeFlash, setShowStrikeFlash] = useState(false);
+    const previousStrikes = useRef(0);
+
+    // Animated score counter
+    const { count: animatedScore, isAnimating: isScoreAnimating } = useCountUp(gameState?.score ?? 0);
 
     const fetchGameState = useCallback(async () => {
         if (!code) return;
@@ -27,6 +34,15 @@ const Display: React.FC = () => {
         const interval = setInterval(fetchGameState, 1500);
         return () => clearInterval(interval);
     }, [fetchGameState]);
+
+    // Detect strike increases and trigger flash
+    useEffect(() => {
+        const currentStrikes = gameState?.strikes ?? 0;
+        if (currentStrikes > previousStrikes.current) {
+            setShowStrikeFlash(true);
+        }
+        previousStrikes.current = currentStrikes;
+    }, [gameState?.strikes]);
 
     // Render answer slots for TV display
     const renderAnswerSlots = () => {
@@ -173,12 +189,20 @@ const Display: React.FC = () => {
             <div className="display-footer">
                 <div className="display-score">
                     <span className="label">Score</span>
-                    <span className="value">{gameState.score}</span>
+                    <span className={`value ${isScoreAnimating ? 'updating' : ''}`}>
+                        {animatedScore}
+                    </span>
                 </div>
                 <div className="display-strikes">
                     {renderStrikes()}
                 </div>
             </div>
+
+            {/* Strike Flash Overlay */}
+            <StrikeFlashOverlay
+                show={showStrikeFlash}
+                onComplete={() => setShowStrikeFlash(false)}
+            />
         </div>
     );
 };
