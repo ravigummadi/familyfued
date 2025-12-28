@@ -11,6 +11,9 @@ const Host: React.FC = () => {
     const [hostId, setHostId] = useState<string>('');
     const [authError, setAuthError] = useState<string>('');
     const [copied, setCopied] = useState(false);
+    const [linkCopied, setLinkCopied] = useState(false);
+
+    const shareUrl = `https://feud.family/game/${code}`;
 
     // Verify host access before enabling polling
     useEffect(() => {
@@ -35,6 +38,12 @@ const Host: React.FC = () => {
         navigator.clipboard.writeText(code || '');
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleCopyLink = () => {
+        navigator.clipboard.writeText(shareUrl);
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2000);
     };
 
     const handleSubmitQuestion = async (question: string, answers: { text: string; weight: number }[]) => {
@@ -119,9 +128,20 @@ const Host: React.FC = () => {
                         {copied ? 'Copied!' : 'Copy'}
                     </button>
                 </div>
-                <p className="share-hint">
-                    Share this code with players! They can join at <strong>feud.family/game/{code}</strong>
-                </p>
+                <p className="share-hint">Share this code with players! They can join at:</p>
+                <div className="share-link-display">
+                    <a
+                        href={shareUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="share-link-value"
+                    >
+                        feud.family/game/{code}
+                    </a>
+                    <button className="btn-copy" onClick={handleCopyLink}>
+                        {linkCopied ? 'Copied!' : 'Copy Link'}
+                    </button>
+                </div>
             </div>
 
             {/* Game Status */}
