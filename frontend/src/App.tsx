@@ -4,6 +4,7 @@ import Home from './Home';
 import Host from './Host';
 import Player from './Player';
 import Display from './Display';
+import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
 
 // Wrapper to conditionally show navbar (hide for TV display mode)
@@ -30,9 +31,11 @@ function AppContent() {
 
 function App() {
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <AppContent />
+      </Router>
+    </ErrorBoundary>
   );
 }
 
