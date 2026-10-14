@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../api';
 import { GameStatus } from '../types';
+import { startVisiblePolling } from '../visiblePolling';
 
 // Configuration constants
 const POLL_INTERVAL_MS = 2000;
@@ -51,20 +52,12 @@ export function useGameState(
         }
     }, [code, hostId, enabled]);
 
-    // Initial fetch
-    useEffect(() => {
-        if (enabled) {
-            setIsLoading(true);
-            fetchGame();
-        }
-    }, [fetchGame, enabled]);
-
-    // Set up polling
+    // Initial fetch and polling pause while the document is hidden.
     useEffect(() => {
         if (!enabled) return;
 
-        const interval = setInterval(fetchGame, POLL_INTERVAL_MS);
-        return () => clearInterval(interval);
+        setIsLoading(true);
+        return startVisiblePolling(fetchGame, POLL_INTERVAL_MS);
     }, [fetchGame, enabled]);
 
     return {
