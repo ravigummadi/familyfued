@@ -5,6 +5,7 @@ import api from './api';
 import { GameStatus } from './types';
 import { useCountUp } from './hooks/useCountUp';
 import StrikeFlashOverlay from './components/StrikeFlashOverlay';
+import { startVisiblePolling } from './visiblePolling';
 
 const Display: React.FC = () => {
     const { code } = useParams<{ code: string }>();
@@ -29,10 +30,8 @@ const Display: React.FC = () => {
     }, [code]);
 
     useEffect(() => {
-        fetchGameState();
         // Faster polling for TV display - update every 1.5 seconds
-        const interval = setInterval(fetchGameState, 1500);
-        return () => clearInterval(interval);
+        return startVisiblePolling(fetchGameState, 1500);
     }, [fetchGameState]);
 
     // Detect strike increases and trigger flash
