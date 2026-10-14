@@ -1,5 +1,3 @@
-import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
-
 // Configuration
 const API_TIMEOUT_MS = 10000;
 const MAX_RETRIES = 2;
@@ -24,82 +22,66 @@ export class ApiError extends Error {
  */
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-/**
- * Determines if an error should trigger a retry.
- */
-const shouldRetry = (error: AxiosError): boolean => {
-    // Retry on network errors or 5xx server errors
-    if (!error.response) return true; // Network error
-    const status = error.response.status;
-    return status >= 500 && status < 600;
-};
+interface RequestConfig {
+    headers?: Record<string, string>;
+}
+
+const baseURL = process.env.REACT_APP_API_URL || '';
 
 /**
- * Creates the API client with interceptors for error handling.
+ * GET/POST transport preserving the response.data shape used by callers.
  */
-const createApiClient = (): AxiosInstance => {
-    const client = axios.create({
-        baseURL: process.env.REACT_APP_API_URL || '',
-        timeout: API_TIMEOUT_MS,
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    });
+const request = async <T>(
+    method: 'GET' | 'POST',
+    path: string,
+    body?: unknown,
+    config?: RequestConfig
+): Promise<{ data: T }> => {
+    const url = baseURL && !/^([a-z][a-z\d+.-]*:)?\/\//i.test(path)
+        ? `${baseURL.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
+        : path;
+    const headers = new Headers({ Accept: 'application/json, text/plain, */*' });
+    // Axios omits Content-Type for requests without a body.
+    if (body !== undefined) headers.set('Content-Type', 'application/json');
+    Object.entries(config?.headers || {}).forEach(([key, value]) => headers.set(key, value));
 
-    // Request interceptor - add common headers
-    client.interceptors.request.use(
-        (config) => {
-            // Could add auth headers, request logging, etc.
-            return config;
-        },
-        (error) => {
-            return Promise.reject(error);
-        }
-    );
-
-    // Response interceptor - handle errors consistently
-    client.interceptors.response.use(
-        (response: AxiosResponse) => {
-            return response;
-        },
-        async (error: AxiosError) => {
-            const config = error.config;
-
-            // Initialize retry count
-            const retryCount = (config as any)?._retryCount || 0;
-
-            // Check if we should retry
-            if (config && shouldRetry(error) && retryCount < MAX_RETRIES) {
-                (config as any)._retryCount = retryCount + 1;
-
-                // Wait before retrying
-                await delay(RETRY_DELAY_MS * (retryCount + 1));
-
-                // Retry the request
-                return client(config);
+    for (let attempt = 0; ; attempt++) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+        let status: number | undefined;
+        let data: any;
+        try {
+            const response = await fetch(url, {
+                method,
+                headers,
+                body: body === undefined ? undefined : JSON.stringify(body),
+                signal: controller.signal,
+            });
+            const text = await response.text();
+            // Like Axios, accept empty or non-JSON responses without a parse error.
+            try { data = JSON.parse(text); } catch { data = text; }
+            status = response.status;
+            if (response.ok) return { data };
+            throw new Error(`Request failed with status code ${status}`);
+        } catch (error) {
+            const retryable = status === undefined || (status >= 500 && status < 600);
+            if (!retryable || attempt >= MAX_RETRIES) {
+                throw new ApiError(getErrorMessage(status, data), status, error as Error);
             }
-
-            // Transform error into ApiError
-            const message = getErrorMessage(error);
-            const statusCode = error.response?.status;
-            throw new ApiError(message, statusCode, error);
+        } finally {
+            clearTimeout(timeout);
         }
-    );
-
-    return client;
+        await delay(RETRY_DELAY_MS * (attempt + 1));
+    }
 };
 
 /**
- * Extracts a user-friendly error message from an Axios error.
+ * Extracts a user-friendly error message from an API response.
  */
-const getErrorMessage = (error: AxiosError): string => {
-    if (!error.response) {
-        // Network error
+const getErrorMessage = (status?: number, data?: { detail?: string }): string => {
+    if (status === undefined) {
         return 'Unable to connect to server. Please check your internet connection.';
     }
-
-    const status = error.response.status;
-    const data = error.response.data as { detail?: string };
 
     // Use server-provided message if available
     if (data?.detail) {
@@ -125,7 +107,11 @@ const getErrorMessage = (error: AxiosError): string => {
     }
 };
 
-// Create and export the singleton API client
-const api = createApiClient();
+const api = {
+    get: <T = any>(url: string, config?: RequestConfig): Promise<{ data: T }> =>
+        request<T>('GET', url, undefined, config),
+    post: <T = any>(url: string, data?: any, config?: RequestConfig): Promise<{ data: T }> =>
+        request<T>('POST', url, data, config),
+};
 
 export default api;
